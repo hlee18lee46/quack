@@ -35,6 +35,10 @@ struct RootTabsView: View {
                 .tabItem {
                     Label("Cortex", systemImage: "chart.line.uptrend.xyaxis")
                 }
+            MeditationView()
+                .tabItem {
+                    Label("Meditate", systemImage: "leaf.fill")
+                }
         }
     }
 }

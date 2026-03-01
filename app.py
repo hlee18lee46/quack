@@ -1247,7 +1247,63 @@ async def mint_and_email(wallet: str, email: str):
         if local_ctx:
             local_ctx.close()
 
+@app.post("/ai/gradient-meditation")
+async def gradient_meditation(wallet: str = Query(...)):
+    # Clean the wallet string from the URL
+    wallet = wallet.strip()
+    
+    # 1. Fetch real vitals from Snowflake
+    conn = get_conn()
+    try:
+        with conn.cursor() as cur:
+            # Snowflake query using the wallet from the query param
+            cur.execute("SELECT HR_BPM, BR_RPM FROM VITALS WHERE wallet=%s ORDER BY TS_MS DESC LIMIT 60", (wallet,))
+            rows = cur.fetchall()
+    finally:
+        conn.close()
 
+    if not rows:
+        # Fallback if no data is found so the app doesn't crash during the demo
+        avg_hr, latest_hr, state = 75.0, 75.0, "NEUTRAL"
+    else:
+        avg_hr = sum(r[0] for r in rows) / len(rows)
+        latest_hr = rows[0][0]
+        state = "STRESSED" if latest_hr > 90 else "TIRED" if latest_hr < 65 else "NEUTRAL"
+
+    # 2. ASK GRADIENT AI TO BE THE "ORCHESTRATOR"
+    system_prompt = (
+        "You are the mediQuack Bio-Feedback DJ. You select music based on Snowflake vitals. "
+        "Tracks available: 'flute', 'yoga', 'mountain'."
+    )
+    user_prompt = (
+        f"User is currently in a {state} state (Avg HR: {avg_hr:.1f}, Latest: {latest_hr:.1f}).\n"
+        "Selection Rules:\n"
+        "1. If STRESSED: pick 'yoga' (The Mountain Relax Yoga) to lower HR.\n"
+        "2. If TIRED: pick 'flute' (Miromax Flute) to provide uplifting focus.\n"
+        "3. If NEUTRAL: pick 'mountain' (The Mountain Meditation) for equanimity.\n"
+        "Return ONLY the track name."
+    )
+
+    try:
+        selected = await gradient_chat(prompt=user_prompt, system=system_prompt)
+        selected = selected.strip().lower().replace("'", "").replace('"', "")
+    except:
+        selected = "mountain" # Safe fallback
+
+    file_map = {
+        "flute": "miromaxmusic-meditation-flute-455457.mp3",
+        "yoga": "the_mountain-meditation-relax-yoga-music-443538.mp3",
+        "mountain": "the_mountain-meditation-meditation-music-490007.mp3"
+    }
+    
+    filename = file_map.get(selected, file_map["mountain"])
+    track_url = f"https://d4f9-155-246-151-34.ngrok-free.app/static/audio/{filename}"
+    
+    return {
+        "ok": True,
+        "track_url": track_url,
+        "insight": f"Gradient AI selected {selected.upper()} therapy because your heart rate is {latest_hr:.0f} BPM."
+    }
 if __name__ == "__main__":
     import uvicorn
     import os
