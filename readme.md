@@ -51,3 +51,8 @@ Select your iPhone as the target device.
 Ensure your Signing & Capabilities are set with a valid developer team.
 
 Click Run (Cmd + R) to install the app on your phone.
+
+
+Meditation songs from below website, it's copyright free music
+
+https://pixabay.com/music/search/meditation/
